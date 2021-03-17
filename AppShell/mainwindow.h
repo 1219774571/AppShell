@@ -1,4 +1,5 @@
 ﻿
+
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
@@ -36,12 +37,14 @@ private:
 
     void killApp(bool all = false);
 
+    /** 加密参数值是否开启 */
     bool isOpenPassword() const;
     void logOut(const QString &log);
 
-    void setProcessAutoRun(const QString &path) const;
+    /** 获取, 设置, 删除 程序开机启动值 */
     QString getProcessAutoRun(const QString &path) const;
-    void delProcessAutoRun(const QString &path) const;
+    bool setProcessAutoRun(const QString &path) const;
+    bool delProcessAutoRun(const QString &path) const;
 
 private slots:
     void activeTray(QSystemTrayIcon::ActivationReason reason);

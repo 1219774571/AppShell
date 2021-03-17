@@ -8,9 +8,13 @@
 #include <QTimer>
 #include <QSettings>
 #include <QCloseEvent>
+#include <QMetaEnum>
 
-#define PASSWORD_CLOSE  "#FF3333"
-#define PASSWORD_OPEN   "#5BFF33"
+
+#define PASSWORD_CLOSE  "background-color: rgb(255, 51, 51);"
+#define PASSWORD_OPEN   "background-color: rgb(92, 255, 51);"
+
+
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -28,11 +32,13 @@ MainWindow::MainWindow(QWidget *parent)
     initProcess();
 }
 
+
 MainWindow::~MainWindow()
 {
     killApp();
     delete ui;
 }
+
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
@@ -45,20 +51,20 @@ void MainWindow::closeEvent(QCloseEvent *event)
     return QMainWindow::closeEvent(event);
 }
 
+
 void MainWindow::init()
 {
     this->setMaximumSize(this->size());
     this->setMinimumSize(this->size());
     ui->AppText->setText(app_->appPath());
 
-    QPalette pale(ui->ArgsPassword->palette());
-    pale.setColor(QPalette::Button, QColor(PASSWORD_CLOSE));
-    ui->ArgsPassword->setPalette(pale);
+    ui->ArgsPassword->setStyleSheet(PASSWORD_CLOSE);
 
     if (app_->appData().isEmpty() == false) {
         logOut(app_->appData());
     }
 }
+
 
 void MainWindow::initSystemTray()
 {
@@ -76,11 +82,16 @@ void MainWindow::initSystemTray()
     systemTray_->show();
 }
 
+
 void MainWindow::initProcess()
 {
     connect(process_, &QProcess::started, this, [this](){ ui->StartUp->setText(QStringLiteral("停止")); });
     connect(process_, &QProcess::readyReadStandardOutput, this, [this](){
         QString outputStr = QString::fromLocal8Bit(process_->readAllStandardOutput());
+        logOut(outputStr);
+    });
+    connect(process_, &QProcess::readyReadStandardError, this, [this](){
+        QString outputStr = QString::fromLocal8Bit(process_->readAllStandardError());
         logOut(outputStr);
     });
     connect(process_, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(processFinished(int, QProcess::ExitStatus)));
@@ -102,6 +113,7 @@ void MainWindow::initProcess()
     }
 }
 
+
 void MainWindow::createMenu()
 {
     QMenu *menu = new QMenu(QStringLiteral("控制"),this);
@@ -112,11 +124,13 @@ void MainWindow::createMenu()
     connect(action, &QAction::triggered, this, [this](){
         QString path(QCoreApplication::applicationFilePath());
         if (getProcessAutoRun(path).isEmpty() == false) {
-            actionMap_["AutoRunBoot"]->setText(QStringLiteral("开机启动"));
-            delProcessAutoRun(path);
+            if (delProcessAutoRun(path)) {
+                actionMap_["AutoRunBoot"]->setText(QStringLiteral("开机启动"));
+            }
         } else {
-            actionMap_["AutoRunBoot"]->setText(QStringLiteral("关闭开机启动"));
-            setProcessAutoRun(path);
+            if (setProcessAutoRun(path)) {
+                actionMap_["AutoRunBoot"]->setText(QStringLiteral("关闭开机启动"));
+            }
         }
     });
     menu->addAction(action);
@@ -126,6 +140,7 @@ void MainWindow::createMenu()
     connect(action, &QAction::triggered, this, [this](){ killApp(true); });
     menu->addAction(action);
 }
+
 
 void MainWindow::killApp(bool all)
 {
@@ -146,10 +161,12 @@ void MainWindow::killApp(bool all)
     }
 }
 
+
 bool MainWindow::isOpenPassword() const
 {
-    return ui->ArgsPassword->palette().color(QPalette::Button) == QColor(PASSWORD_OPEN);
+    return ui->ArgsPassword->styleSheet().contains(PASSWORD_OPEN);
 }
+
 
 void MainWindow::logOut(const QString &log)
 {
@@ -157,14 +174,14 @@ void MainWindow::logOut(const QString &log)
     ui->LogOut->append(time + log);
 }
 
-void MainWindow::setProcessAutoRun(const QString &path) const
+
+bool MainWindow::setProcessAutoRun(const QString &path) const
 {
-    QSysInfo sysinfo;
-    sysinfo.currentCpuArchitecture();
 #if WIN32
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 7, 0))
     QSettings reg("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", QSettings::Registry64Format);
 #else
-    QSettings reg;
+    QSettings reg("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run");
 #endif
     QFileInfo info(path);
     QString name = info.baseName();
@@ -173,12 +190,22 @@ void MainWindow::setProcessAutoRun(const QString &path) const
     if (setPath != newPath) {
         reg.setValue(name, newPath);
     }
+    return true;
+#else
+    Q_UNUSED(path);
+    return false;
+#endif
 }
+
 
 QString MainWindow::getProcessAutoRun(const QString &path) const
 {
 #if WIN32
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 7, 0))
     QSettings reg("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", QSettings::Registry64Format);
+#else
+    QSettings reg("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run");
+#endif
 #else
     QSettings reg;
 #endif
@@ -186,18 +213,26 @@ QString MainWindow::getProcessAutoRun(const QString &path) const
     return reg.value(info.baseName()).toString();
 }
 
-void MainWindow::delProcessAutoRun(const QString &path) const
+
+bool MainWindow::delProcessAutoRun(const QString &path) const
 {
 #if WIN32
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 7, 0))
     QSettings reg("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", QSettings::Registry64Format);
 #else
-    QSettings reg;
+    QSettings reg("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run");
 #endif
     QFileInfo info(path);
     QString name = info.baseName();
     reg.setValue(name, "");
     reg.remove(name);
+    return true;
+#else
+    Q_UNUSED(path);
+    return false;
+#endif
 }
+
 
 void MainWindow::activeTray(QSystemTrayIcon::ActivationReason reason)
 {
@@ -213,12 +248,14 @@ void MainWindow::activeTray(QSystemTrayIcon::ActivationReason reason)
     }
 }
 
+
 void MainWindow::processFinished(int exitCode, QProcess::ExitStatus status)
 {
-    Q_UNUSED(exitCode);
-    Q_UNUSED(status);
+    QMetaEnum meta = QMetaEnum::fromType<QProcess::ExitStatus>();
+    logOut(QString("exit code[%1], status[%2]").arg(exitCode).arg(meta.valueToKey(status)));
     ui->StartUp->setText(QStringLiteral("启动"));
 }
+
 
 void MainWindow::on_SelectApp_clicked()
 {
@@ -231,14 +268,14 @@ void MainWindow::on_SelectApp_clicked()
     logOut(app_->appData());
 }
 
+
 void MainWindow::on_ArgsPassword_clicked()
 {
     logOut(isOpenPassword() ? QStringLiteral("恢复普通参数状态") : QStringLiteral("进入加密参数状态"));
-    QColor color(isOpenPassword() ? PASSWORD_CLOSE : PASSWORD_OPEN);
-    QPalette pale(ui->ArgsPassword->palette());
-    pale.setColor(QPalette::Button, color);
-    ui->ArgsPassword->setPalette(pale);
+    QString color(isOpenPassword() ? PASSWORD_CLOSE : PASSWORD_OPEN);
+    ui->ArgsPassword->setStyleSheet(color);
 }
+
 
 void MainWindow::on_ArgsAdd_clicked()
 {
@@ -252,11 +289,13 @@ void MainWindow::on_ArgsAdd_clicked()
     logOut(app_->appData());
 }
 
+
 void MainWindow::on_ReArgs_clicked()
 {
     app_->cleanArgs();
     logOut(app_->appData());
 }
+
 
 void MainWindow::on_Save_clicked()
 {
@@ -269,10 +308,15 @@ void MainWindow::on_Save_clicked()
     logOut(QStringLiteral("数据保存到: ") + app_->getPath());
 }
 
+
 void MainWindow::on_StartUp_clicked()
 {
     if (ui->StartUp->text() == QStringLiteral("启动")) {
-        process_->start(app_->appPath(), app_->appArgs());
+        QString path = app_->appPath();
+        if (path.isEmpty()) {
+            return ;
+        }
+        process_->start(path, app_->appArgs());
         ui->StartUp->setText(QStringLiteral("停止"));
     } else {
         process_->kill();

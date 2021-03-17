@@ -3,6 +3,7 @@
 #include <QFile>
 #include <QDomDocument>
 
+
 AppConsole::AppConsole(const QString &path, QObject *parent)
     : QObject(parent)
     , key_("password.741/+8520*-963")
@@ -10,6 +11,7 @@ AppConsole::AppConsole(const QString &path, QObject *parent)
 {
     restore();
 }
+
 
 bool AppConsole::setApp(const QString &app)
 {
@@ -23,6 +25,7 @@ bool AppConsole::setApp(const QString &app)
     return true;
 }
 
+
 void AppConsole::addArgs(const QString &option, const QString &arg, const QString &method)
 {
     argsFormat data(option, arg, method);
@@ -35,6 +38,7 @@ void AppConsole::addArgs(const QString &option, const QString &arg, const QStrin
         args_.append(data);
     }
 }
+
 
 QStringList AppConsole::appArgs() const
 {
@@ -52,6 +56,7 @@ QStringList AppConsole::appArgs() const
     return args;
 }
 
+
 QString AppConsole::appData() const
 {
     QString data = app_;
@@ -60,6 +65,7 @@ QString AppConsole::appData() const
     }
     return data;
 }
+
 
 void AppConsole::save() const
 {
@@ -90,6 +96,7 @@ void AppConsole::save() const
     file.flush();
     file.close();
 }
+
 
 void AppConsole::restore()
 {
@@ -127,6 +134,7 @@ void AppConsole::restore()
     }
 }
 
+
 void AppConsole::packageArgsFormat(AppConsole::argsFormat &arg) const
 {
     if (arg.method.isEmpty()) {
@@ -135,6 +143,7 @@ void AppConsole::packageArgsFormat(AppConsole::argsFormat &arg) const
         arg.value = encrypt(arg.value.toUtf8(), key_);
     }
 }
+
 
 void AppConsole::unpackageArgsFormat(AppConsole::argsFormat &arg) const
 {
@@ -145,6 +154,7 @@ void AppConsole::unpackageArgsFormat(AppConsole::argsFormat &arg) const
     }
 }
 
+
 QByteArray AppConsole::encrypt(QByteArray data, const QByteArray &key) const
 {
     for (int i = 0; i < data.size(); ++i) {
@@ -152,6 +162,7 @@ QByteArray AppConsole::encrypt(QByteArray data, const QByteArray &key) const
     }
     return data.toBase64();
 }
+
 
 QByteArray AppConsole::decrypt(QByteArray data, const QByteArray &key) const
 {
