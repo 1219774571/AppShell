@@ -14,6 +14,8 @@
 #define PASSWORD_CLOSE  "background-color: rgb(255, 51, 51);"
 #define PASSWORD_OPEN   "background-color: rgb(92, 255, 51);"
 
+#define PROCESS_START   QStringLiteral("启动")
+#define PROCESS_STOP    QStringLiteral("停止")
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -21,10 +23,8 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
     , app_(new AppConsole(QCoreApplication::applicationDirPath() + "/config.xml", this))
     , systemTray_(new QSystemTrayIcon(QIcon(":/ico.ico"), this))
-    , process_(new QProcess(this))
 {
     ui->setupUi(this);
-    this->setWindowTitle(QString("AppShell %1").arg(VERSION));
     init();
     createMenu();
 
@@ -35,14 +35,16 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    killApp();
+    killApp(true);
     delete ui;
 }
 
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    if (systemTray_->isVisible() && process_->isOpen()) {
+    int index = ui->AppSelect->currentIndex();
+    QString path = ui->AppSelect->currentText();
+    if (systemTray_->isVisible() && app_->IsRun(path, GetAppSelectNum(path, index))) {
         this->hide();
         event->ignore();
         return ;
@@ -54,15 +56,29 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
 void MainWindow::init()
 {
-    this->setMaximumSize(this->size());
-    this->setMinimumSize(this->size());
-    ui->AppText->setText(app_->appPath());
+    this->setWindowTitle(QString("AppShell %1").arg(VERSION));
 
+    for (int i = 0; i < app_->Size(); ++i) {
+        ui->AppSelect->addItem(app_->GetArgsPath(i));
+    }
     ui->ArgsPassword->setStyleSheet(PASSWORD_CLOSE);
 
-    if (app_->appData().isEmpty() == false) {
-        logOut(app_->appData());
-    }
+    connect(app_, &AppConsole::AppStandOut, this, [this](const QString &path, const QString &log){ LogOut(path + ": " + log); });
+    connect(app_, &AppConsole::AppErrorOut, this, [this](const QString &path, const QString &log){ LogOut(path + ": " + log); });
+    connect(app_, &AppConsole::AppStarted, this, [this](const QString &path){
+        LogOut(path + ": start");
+        if (ui->AppSelect->currentText() == path) {
+            ui->StartUp->setText(PROCESS_STOP);
+        }
+    });
+    connect(app_, &AppConsole::AppExitStatus, this, [this](const QString &path, int code, QProcess::ExitStatus status){
+        QMetaEnum meta = QMetaEnum::fromType<QProcess::ExitStatus>();
+        LogOut(path + QString(": exit. code[%1], status[%2]").arg(code).arg(meta.valueToKey(status)));
+        if (ui->AppSelect->currentText() == path) {
+            ui->StartUp->setText(PROCESS_START);
+        }
+        this->show();
+    });
 }
 
 
@@ -85,31 +101,26 @@ void MainWindow::initSystemTray()
 
 void MainWindow::initProcess()
 {
-    connect(process_, &QProcess::started, this, [this](){ ui->StartUp->setText(QStringLiteral("停止")); });
-    connect(process_, &QProcess::readyReadStandardOutput, this, [this](){
-        QString outputStr = QString::fromLocal8Bit(process_->readAllStandardOutput());
-        logOut(outputStr);
-    });
-    connect(process_, &QProcess::readyReadStandardError, this, [this](){
-        QString outputStr = QString::fromLocal8Bit(process_->readAllStandardError());
-        logOut(outputStr);
-    });
-    connect(process_, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(processFinished(int, QProcess::ExitStatus)));
-
-    QFileInfo fileInfo(app_->appPath());
-    if (QFile::exists(fileInfo.absoluteFilePath())) {
-        QScopedPointer<QProcess> process(new QProcess);
+    for (int i = 0; i < ui->AppSelect->count(); ++i) {
+        QString path = ui->AppSelect->itemText(i);
+        QFileInfo fileInfo(path);
+        if (QFile::exists(fileInfo.absoluteFilePath())) {
+            QScopedPointer<QProcess> process(new QProcess);
 #ifdef Q_OS_WIN
-        process->start("tasklist", QStringList() << "/FI imagename eq " + fileInfo.fileName());
+            process->start("tasklist", QStringList() << "/FI imagename eq " + fileInfo.fileName());
 #else
-        process->start("sh", QStringList() << "-c" << QString("ps | grep '%1'").arg(fileInfo.fileName()));
+            process->start("/bin/bash", QStringList() << "-c" << QString("ps -ef | grep '%1' | grep -v grep").arg(fileInfo.fileName()));
 #endif
-        process->waitForFinished();
-        QString outputStr = QString::fromLocal8Bit(process->readAllStandardOutput());
-        if(outputStr.contains(fileInfo.fileName()) == false){
-            on_StartUp_clicked();
-            QTimer::singleShot(0, this, &MainWindow::hide);
+            process->waitForFinished();
+            QString outputStr = QString::fromLocal8Bit(process->readAllStandardOutput());
+            if(outputStr.contains(fileInfo.fileName()) == false){
+                app_->Start(path, GetAppSelectNum(path, i));
+            }
         }
+    }
+
+    if (app_->IsAllRun()) {
+        QTimer::singleShot(0, this, &MainWindow::hide);
     }
 }
 
@@ -137,20 +148,32 @@ void MainWindow::createMenu()
 
     action = new QAction(QStringLiteral("强制关闭运行程序"), this);
     actionMap_["forceKillAllApp"] = action;
-    connect(action, &QAction::triggered, this, [this](){ killApp(true); });
+    connect(action, &QAction::triggered, this, [this](){ killApp(false, true); });
+    menu->addAction(action);
+
+    action = new QAction(QStringLiteral("全部关闭"), this);
+    actionMap_["AllKillAllApp"] = action;
+    connect(action, &QAction::triggered, this, [this](){ killApp(); });
     menu->addAction(action);
 }
 
 
-void MainWindow::killApp(bool all)
+void MainWindow::killApp(bool all, bool sys)
 {
-    if (process_->isOpen()) {
-        process_->close();
-        process_->terminate();
+    QString path = ui->AppSelect->currentText();
+    int index = ui->AppSelect->currentIndex();
+
+    // 杀掉自身运行中的
+    if (all) {
+        app_->StopAll();
+    } else {
+        int num = GetAppSelectNum(path, index);
+        app_->Stop(path, num);
     }
 
-    if (all) {
-        QFileInfo fileInfo(app_->appPath());
+    // 杀掉外部运行的
+    if (sys) {
+        QFileInfo fileInfo(path);
         if (QFile::exists(fileInfo.absoluteFilePath())) {
 #ifdef Q_OS_WIN
             system(QString("taskkill /F /IM " + fileInfo.fileName() + " /T").toUtf8().constData());
@@ -168,7 +191,7 @@ bool MainWindow::isOpenPassword() const
 }
 
 
-void MainWindow::logOut(const QString &log)
+void MainWindow::LogOut(const QString &log)
 {
     QString time = QTime::currentTime().toString("hh:mm:ss.zzz") + ": ";
     ui->LogOut->append(time + log);
@@ -234,6 +257,24 @@ bool MainWindow::delProcessAutoRun(const QString &path) const
 }
 
 
+int MainWindow::GetAppSelectNum(const QString &path, int index)
+{
+    int num = 0;
+    if (index > ui->AppSelect->count()) {
+        index = ui->AppSelect->count();
+    }
+
+    for (int i = 0; i < index; ++i) {
+        if (ui->AppSelect->itemText(i) != path) {
+            continue;
+        }
+        ++num;
+    }
+
+    return num;
+}
+
+
 void MainWindow::activeTray(QSystemTrayIcon::ActivationReason reason)
 {
     switch (reason) {
@@ -249,78 +290,160 @@ void MainWindow::activeTray(QSystemTrayIcon::ActivationReason reason)
 }
 
 
-void MainWindow::processFinished(int exitCode, QProcess::ExitStatus status)
-{
-    QMetaEnum meta = QMetaEnum::fromType<QProcess::ExitStatus>();
-    logOut(QString("exit code[%1], status[%2]").arg(exitCode).arg(meta.valueToKey(status)));
-    ui->StartUp->setText(QStringLiteral("启动"));
-}
-
-
-void MainWindow::on_SelectApp_clicked()
-{
-    QString path =  QFileDialog::getOpenFileName(this, QStringLiteral("选择启动程序"));
-    if (path.isEmpty()) {
-        return ;
-    }
-    ui->AppText->setText(path);
-    app_->setApp(path);
-    logOut(app_->appData());
-}
-
-
 void MainWindow::on_ArgsPassword_clicked()
 {
-    logOut(isOpenPassword() ? QStringLiteral("恢复普通参数状态") : QStringLiteral("进入加密参数状态"));
+    LogOut(isOpenPassword() ? QStringLiteral("恢复普通参数状态") : QStringLiteral("进入加密参数状态"));
     QString color(isOpenPassword() ? PASSWORD_CLOSE : PASSWORD_OPEN);
     ui->ArgsPassword->setStyleSheet(color);
-}
-
-
-void MainWindow::on_ArgsAdd_clicked()
-{
-    QString method("password");
-    if (isOpenPassword() == false) {
-        method.clear();
+    QLineEdit::EchoMode mode = QLineEdit::Normal;
+    if (isOpenPassword()) {
+        mode = QLineEdit::Password;
     }
-    QString option = ui->ArgsOption->text();
-    QString value = ui->ArgsValue->text();
-    app_->addArgs(option, value, method);
-    logOut(app_->appData());
+    ui->ArgsValue->setEchoMode(mode);
 }
 
 
 void MainWindow::on_ReArgs_clicked()
 {
-    app_->cleanArgs();
-    logOut(app_->appData());
+    int index = ui->AppSelect->currentIndex();
+    if (index == -1) {
+        return ;
+    }
+
+    QString path = ui->AppSelect->itemText(index);
+    app_->CleanArgs(path);
+    LogOut(app_->AppData(path));
 }
 
 
 void MainWindow::on_Save_clicked()
 {
-    if (app_->appPath().isEmpty()) {
-        logOut(QStringLiteral("错误: 应用程序路径未设置"));
+    if (app_->GetPath().isEmpty()) {
+        LogOut(QStringLiteral("错误: 配置文件保存路径未设置"));
         return ;
     }
-    app_->save();
-    logOut(app_->appData());
-    logOut(QStringLiteral("数据保存到: ") + app_->getPath());
+    app_->Save();
+
+    ui->LogOut->clear();
+
+    int max = ui->AppSelect->count();
+    for (int i = 0; i < max; ++i) {
+        QString path = ui->AppSelect->itemText(i);
+        int num = GetAppSelectNum(path, i);
+        LogOut(app_->AppData(path, num));
+    }
+
+    LogOut(QStringLiteral("数据保存到: ") + app_->GetPath());
 }
 
 
 void MainWindow::on_StartUp_clicked()
 {
-    if (ui->StartUp->text() == QStringLiteral("启动")) {
-        QString path = app_->appPath();
-        if (path.isEmpty()) {
-            return ;
-        }
-        process_->start(path, app_->appArgs());
-        ui->StartUp->setText(QStringLiteral("停止"));
+    int index = ui->AppSelect->currentIndex();
+    if (index == -1) {
+        return ;
+    }
+    QString path = ui->AppSelect->itemText(index);
+    int num = GetAppSelectNum(path, index);
+    if (app_->IsRun(path, num)) {
+        app_->Stop(path, num);
     } else {
-        process_->kill();
-        process_->close();
-        ui->StartUp->setText(QStringLiteral("启动"));
+        app_->Start(path, num);
+    }
+}
+
+void MainWindow::on_AddApp_clicked()
+{
+    QString path =  QFileDialog::getOpenFileName(this, QStringLiteral("选择启动程序"));
+    if (path.isEmpty()) {
+        return ;
+    }
+
+    ui->AppSelect->addItem(path);
+    app_->AddApp(path);
+    ui->AppSelect->setCurrentIndex(ui->AppSelect->count() - 1);
+}
+
+
+void MainWindow::on_DelApp_clicked()
+{
+    int index = ui->AppSelect->currentIndex();
+    if (index == -1) {
+        return ;
+    }
+
+    QString path = ui->AppSelect->itemText(index);
+
+    int num = GetAppSelectNum(path, index);
+
+    if (app_->DelApp(path, num) == false) {
+        LogOut("Application data does not exist");
+    }
+
+    ui->AppSelect->removeItem(index);
+}
+
+
+void MainWindow::on_AddArgs_clicked()
+{
+    int index = ui->AppSelect->currentIndex();
+    if (index == -1) {
+        LogOut("Please select an application");
+        return ;
+    }
+
+    QString path = ui->AppSelect->itemText(index);
+    QString option = ui->ArgsOption->text();
+    QString value = ui->ArgsValue->text();
+
+    int num = GetAppSelectNum(path, index);
+
+    ArgsFormatBase::mMethod method = ArgsFormatBase::kNone;
+    if (isOpenPassword()) {
+        method = ArgsFormatBase::kPassword;
+        ui->ArgsValue->clear();
+    }
+
+    app_->AddApp(path, option, value, method, true, num);
+    LogOut(app_->AppData(path, num));
+}
+
+
+void MainWindow::on_DelArgs_clicked()
+{
+    int index = ui->AppSelect->currentIndex();
+    if (index == -1) {
+        LogOut("Please select an application");
+        return ;
+    }
+
+    QString path = ui->AppSelect->itemText(index);
+
+    int num = GetAppSelectNum(path, index);
+
+    QString option = ui->ArgsOption->text();
+    if (app_->DelArgs(path, option, num) == false) {
+        LogOut("Application data does not exist");
+    }
+    LogOut(app_->AppData(path, num));
+}
+
+
+void MainWindow::on_AllStartUp_clicked()
+{
+    app_->StartAll();
+}
+
+
+void MainWindow::on_AppSelect_currentIndexChanged(const QString &arg1)
+{
+    int index = ui->AppSelect->currentIndex();
+    int num = GetAppSelectNum(arg1, index);
+
+    LogOut(app_->AppData(arg1, num));
+    if (app_->IsRun(arg1, num)) {
+        ui->StartUp->setText(PROCESS_STOP);
+    } else {
+        ui->StartUp->setText(PROCESS_START);
     }
 }

@@ -1,0 +1,3 @@
+[submodule "AppShell/xxtea"]
+	path = AppShell/xxtea
+	url = https://github.com/xxtea/xxtea-c.git

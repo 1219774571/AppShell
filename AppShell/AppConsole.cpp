@@ -9,65 +9,113 @@ AppConsole::AppConsole(const QString &path, QObject *parent)
     , key_("password.741/+8520*-963")
     , path_(path)
 {
-    restore();
+    Restore();
 }
 
 
-bool AppConsole::setApp(const QString &app)
+void AppConsole::AddApp(const QString &appPath, const QString &option, const QString &value, const ArgsFormatBase::mMethod method, bool enable, int index)
 {
-    if (app.isEmpty()) {
+    ArgsFormatBase arg(option, value, method);
+    arg.UpdateMethod(key_);
+
+    if (index == -1) {
+        AppArgsStruct args(ArgsFormat(appPath, arg, enable));
+        args_.append(args);
+        return ;
+    }
+
+    int pos = GetSameArgsIndex(appPath, index);
+
+    args_[pos].args.enable = enable;
+    int argPos = args_.at(pos).args.args.indexOf(arg);
+    if (argPos == -1) {
+        args_[pos].args.args.append(arg);
+    } else {
+        args_[pos].args.args.replace(argPos, arg);
+    }
+}
+
+
+bool AppConsole::DelApp(const QString &appPath, int index)
+{
+    int pos = GetSameArgsIndex(appPath, index);
+
+    if (pos == -1) {
         return false;
     }
-    if (QFile::exists(app) == false) {
-        return false;
-    }
-    app_ = app;
+
+    args_.remove(pos);
     return true;
 }
 
 
-void AppConsole::addArgs(const QString &option, const QString &arg, const QString &method)
+bool AppConsole::CleanArgs(const QString &appPath, int index)
 {
-    argsFormat data(option, arg, method);
-    packageArgsFormat(data);
+    int pos = GetSameArgsIndex(appPath, index);
 
-    int index = args_.indexOf(data);
-    if (index != -1) {
-        args_.replace(index, data);
-    } else {
-        args_.append(data);
+    if (pos == -1) {
+        return false;
     }
+
+    args_[pos].args.args.clear();
+    return true;
 }
 
 
-QStringList AppConsole::appArgs() const
+bool AppConsole::DelArgs(const QString &appPath, const QString &option, int index)
+{
+    int pos = GetSameArgsIndex(appPath, index);
+
+    if (pos == -1) {
+        return false;
+    }
+
+    ArgsFormatBase base;
+    base.option = option;
+    int argsPos = args_.at(pos).args.args.indexOf(base);
+
+    if (argsPos == -1) {
+        return false;
+    }
+
+    args_[pos].args.args.remove(argsPos);
+    return true;
+}
+
+
+QStringList AppConsole::AppArgs(const QString &appPath, int index) const
 {
     QStringList args;
-    for (auto i : args_) {
-        unpackageArgsFormat(i);
-        if (i.option.isEmpty() == false) {
-            args.append(i.option);
-        }
-        if (i.value.isEmpty() == false) {
-            args.append(i.value);
-        }
+    int pos = GetSameArgsIndex(appPath, index);
+
+    if (pos == -1) {
+        return args;
     }
 
-    return args;
+    return args_.at(pos).args.Args(key_);
 }
 
 
-QString AppConsole::appData() const
+QString AppConsole::AppData(const QString &appPath, int index) const
 {
-    QString data = app_;
-    for (auto &i : args_) {
-        data += QStringLiteral(" ") + i.option + QStringLiteral(" ") + i.value;
+    QString appArgs;
+    int pos = GetSameArgsIndex(appPath, index);
+
+    if (pos == -1) {
+        return appArgs;
     }
-    return data;
+
+    QStringList args = args_.at(pos).args.Args();
+    appArgs = appPath;
+    for (auto &i : args) {
+        appArgs += " " + i;
+    }
+
+    return appArgs;
 }
 
 
-void AppConsole::save() const
+void AppConsole::Save() const
 {
     QDomDocument doc;
     QDomProcessingInstruction instruction;
@@ -77,16 +125,12 @@ void AppConsole::save() const
     QDomElement root = doc.createElement("AppConsole");
     root.setAttribute("method", "startApp");
     doc.appendChild(root);
-    QDomElement app = doc.createElement("App");
-    app.setAttribute("path", app_);
-    root.appendChild(app);
+
     for (auto &i : args_) {
-        QDomElement element = doc.createElement("Args");
-        element.setAttribute("option", i.option);
-        element.setAttribute("value", i.value);
-        element.setAttribute("method", i.method);
-        app.appendChild(element);
+        nArgsFormat nArgs(i.args);
+        nArgs.CreateXml(doc, root);
     }
+
     QByteArray data = doc.toByteArray();
     QFile file(path_);
     if (file.open(QFile::WriteOnly) == false) {
@@ -98,7 +142,7 @@ void AppConsole::save() const
 }
 
 
-void AppConsole::restore()
+void AppConsole::Restore()
 {
     QFile file(path_);
     if (file.open(QFile::ReadOnly) == false) {
@@ -110,65 +154,199 @@ void AppConsole::restore()
     QDomDocument doc;
     doc.setContent(data);
     QDomElement element = doc.firstChildElement("AppConsole");
+
     if (element.isNull()) {
         return ;
     }
+
     if (element.attribute("method") != "startApp") {
         return ;
     }
-    element = element.firstChildElement("App");
-    if (element.isNull()) {
-        return ;
-    }
-    app_ = element.attribute("path");
 
     args_.clear();
-    element = element.firstChildElement("Args");
+    element = element.firstChildElement("App");
     while (element.isNull() == false) {
-        argsFormat arg;
-        arg.option = element.attribute("option");
-        arg.value = element.attribute("value");
-        arg.method = element.attribute("method");
-        args_.append(arg);
+        nArgsFormat nArgs;
+        nArgs.ParseXml(element);
+        ArgsFormat args(nArgs);
+        AppArgsStruct appArgs(args);
+        args_.append(appArgs);
         element = element.nextSiblingElement();
     }
 }
 
 
-void AppConsole::packageArgsFormat(AppConsole::argsFormat &arg) const
+QString AppConsole::GetArgsPath(int i)
 {
-    if (arg.method.isEmpty()) {
+    QString path;
+    if (i < 0 || i >= args_.size()) {
+        return path;
+    }
+
+    return args_.at(i).args.path;
+}
+
+
+void AppConsole::Start(const QString &appPath, int index)
+{
+    int pos = GetSameArgsIndex(appPath, index);
+
+    if (pos == -1) {
         return ;
-    } else if (arg.method == "password") {
-        arg.value = encrypt(arg.value.toUtf8(), key_);
     }
-}
 
-
-void AppConsole::unpackageArgsFormat(AppConsole::argsFormat &arg) const
-{
-    if (arg.method.isEmpty()) {
+    if (args_.at(pos).process->isOpen()) {
         return ;
-    } else if (arg.method == "password") {
-        arg.value = decrypt(arg.value.toUtf8(), key_);
     }
+
+    disconnect(args_.at(pos).process.data(), &QProcess::readyReadStandardOutput, this, &AppConsole::ParseStandOut);
+    disconnect(args_.at(pos).process.data(), &QProcess::readyReadStandardError, this, &AppConsole::ParseErrorOut);
+    disconnect(args_.at(pos).process.data(), &QProcess::started, this, &AppConsole::ParseStarted);
+    disconnect(args_.at(pos).process.data(), SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(ParseExited(int, QProcess::ExitStatus)));
+
+    connect(args_.at(pos).process.data(), &QProcess::readyReadStandardOutput, this, &AppConsole::ParseStandOut);
+    connect(args_.at(pos).process.data(), &QProcess::readyReadStandardError, this, &AppConsole::ParseErrorOut);
+    connect(args_.at(pos).process.data(), &QProcess::started, this, &AppConsole::ParseStarted);
+    connect(args_.at(pos).process.data(), SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(ParseExited(int, QProcess::ExitStatus)));
+
+    args_.at(pos).process->start(appPath, this->AppArgs(appPath));
 }
 
 
-QByteArray AppConsole::encrypt(QByteArray data, const QByteArray &key) const
+void AppConsole::Stop(const QString &appPath, int index)
 {
-    for (int i = 0; i < data.size(); ++i) {
-        data[i] = data.at(i) ^ key.at(i % key.size());
+    int pos = GetSameArgsIndex(appPath, index);
+
+    if (pos == -1) {
+        return ;
     }
-    return data.toBase64();
+
+    args_.at(pos).process->kill();
+    args_.at(pos).process->close();
 }
 
 
-QByteArray AppConsole::decrypt(QByteArray data, const QByteArray &key) const
+void AppConsole::StartAll()
 {
-    data = QByteArray::fromBase64(data);
-    for (int i = 0; i < data.size(); ++i) {
-        data[i] = data.at(i) ^ key.at(i % key.size());
+    for (auto &i : args_) {
+        Start(i.args.path);
     }
-    return data;
 }
+
+
+void AppConsole::StopAll()
+{
+    for (auto &i : args_) {
+        Stop(i.args.path);
+    }
+}
+
+
+bool AppConsole::IsRun(const QString &appPath, int index) const
+{
+    int pos = GetSameArgsIndex(appPath, index);
+
+    if (pos == -1) {
+        return false;
+    }
+
+    return args_.at(pos).process->isOpen();
+}
+
+
+bool AppConsole::IsAllRun() const
+{
+    for (auto &i : args_) {
+        if (i.process->isOpen() == false) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+int AppConsole::GetArgsIndex(const QString &path, int pos) const
+{
+    for (int i = pos; i < args_.size(); ++i) {
+        if (args_.at(i).args.path != path) {
+            continue;
+        }
+        return i;
+    }
+    return -1;
+}
+
+
+int AppConsole::GetArgsIndex(const QObject *obj) const
+{
+    for (int i = 0; i < args_.size(); ++i) {
+        if (args_.at(i).process.data() != obj) {
+            continue;
+        }
+        return i;
+    }
+    return -1;
+}
+
+
+int AppConsole::GetSameArgsIndex(const QString &appPath, int num) const
+{
+    int pos = GetArgsIndex(appPath);
+
+    if (pos == -1) {
+        return pos;
+    }
+
+    for (int i = 0; i < num; ++i, --num) {
+        int position = GetArgsIndex(appPath, pos + 1);
+        if (position == -1) {
+            break;
+        }
+        pos = position;
+    }
+
+    return pos;
+}
+
+
+void AppConsole::ParseStandOut()
+{
+    int i = GetArgsIndex(sender());
+    QString output = QString::fromLocal8Bit(args_.at(i).process->readAllStandardOutput());
+    emit AppStandOut(args_.at(i).args.path, output);
+}
+
+
+void AppConsole::ParseErrorOut()
+{
+    int i = GetArgsIndex(sender());
+    if (i == -1) {
+        return ;
+    }
+    QString output = QString::fromLocal8Bit(args_.at(i).process->readAllStandardError());
+    emit AppErrorOut(args_.at(i).args.path, output);
+}
+
+
+void AppConsole::ParseStarted()
+{
+    int i = GetArgsIndex(sender());
+    if (i == -1) {
+        return ;
+    }
+    emit AppStarted(args_.at(i).args.path);
+}
+
+
+void AppConsole::ParseExited(int code, QProcess::ExitStatus status)
+{
+    int index = GetArgsIndex(sender());
+    if (index == -1) {
+        return ;
+    }
+
+    args_.at(index).process->close();
+    emit AppExitStatus(args_.at(index).args.path, code, status);
+}
+

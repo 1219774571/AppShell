@@ -10,13 +10,19 @@ include(../command.pri)
 
 SOURCES += \
     AppConsole.cpp \
+    ArgsFormatData.cpp \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    xxtea/xxtea.c \
+    xxteaInteface.cpp
 
 HEADERS += \
     AppConsole.h \
+    ArgsFormatData.h \
     mainwindow.h \
-    version.h
+    version.h \
+    xxtea/xxtea.h \
+    xxteaInteface.h
 
 FORMS += \
     mainwindow.ui

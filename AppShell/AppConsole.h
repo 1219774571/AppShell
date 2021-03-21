@@ -4,77 +4,145 @@
 #include <QObject>
 #include <QVector>
 
+#include "ArgsFormatData.h"
+
+
 class AppConsole : public QObject
 {
     Q_OBJECT
 public:
-    struct argsFormat{
-        QString option;
-        QString value;
-        QString method;
-        argsFormat(){}
-        argsFormat(const QString &o, const QString &v, const QString &m) :option(o), value(v), method(m) {}
-        bool operator ==(const argsFormat &f) { return option == f.option; }
-    };
 
     explicit AppConsole(const QString &path, QObject *parent = nullptr);
 
     /**
-     * @brief setApp 设置应用程序路径
+     * @brief AddApp 添加应用程序
      * @param app 应用路径
-     * @return 成功返回true, 反之返回false
+     * @param option 选项, 如果相同选项则替换
+     * @param value 参数值
+     * @param method 方法
+     * @param enable 启用
+     * @param index 修改第几个相同的[0, max), 超出则修改最后一个找到的, 未找到或-1则进行添加
      */
-    bool setApp(const QString &app);
+    void AddApp(const QString &appPath, const QString &option = QString(), const QString &value = QString(), const ArgsFormatBase::mMethod method = ArgsFormatBase::kNone, bool enable = true, int index = -1);
 
     /**
-     * @brief addArgs 添加参数
+     * @brief DelApp 删除应用程序
+     * @param appPath 应用路径
+     * @param index 删除第几个相同的[0, max), 超出则删除最后一个找到的, 0则删除第一个
+     * @return 存在删除成功返回true, 不存在返回false
+     */
+    bool DelApp(const QString &appPath, int index = 0);
+
+    /**
+     * @brief CleanArgs 清空应用程序的参数
+     * @param appPath 应用路径
+     * @param index 清空第几个相同的[0, max), 超出则清空最后一个找到的, 0则清空第一个
+     * @return 存在清空成功返回true, 不存在返回false
+     */
+    bool CleanArgs(const QString &appPath, int index = 0);
+
+    /**
+     * @brief DelArgs 删除指定参数
+     * @param appPath 应用参数
      * @param option 选项
-     * @param arg 参数
+     * @param index 删除第几个相同的[0, max), 超出则删除最后一个找到的, 0则删除第一个
+     * @return 存在删除成功返回true, 不存在返回false
      */
-    void addArgs(const QString &option, const QString &arg, const QString &method = QString());
-
-    /**
-     * @brief cleanArgs 清空所有参数
-     */
-    void cleanArgs() { args_.clear(); }
-
-    /**
-     * @brief appPath 获取应用路径
-     * @return 应用路径
-     */
-    QString appPath() const { return app_; }
+    bool DelArgs(const QString &appPath, const QString &option, int index = 0);
 
     /**
      * @brief appArgs 获取解封后的参数列表
+     * @param index 第几个相同的[0, max), 超出则返回最后一个找到的, 0则第一个
      * @return 解封装后的参数
      */
-    QStringList appArgs() const;
+    QStringList AppArgs(const QString &appPath, int index = 0) const;
 
     /**
      * @brief appData 获取应用路径和参数组合的数据
+     * @param index 第几个相同的[0, max), 超出则返回最后一个找到的, 0则第一个
      * @return 返回封装后的所有数据
      */
-    QString appData() const;
+    QString AppData(const QString &appPath, int index = 0) const;
 
-    QString getPath() const {return path_; }
-    void setPath(const QString &path) { path_ = path; }
+    /**
+     * @brief GetPath 获取xml配置文件保存路径
+     * @return 路径
+     */
+    QString GetPath() const {return path_; }
 
-    void save() const;
+    /**
+     * @brief SetPath 设置xml配置文件保存路径
+     * @param path 路径
+     */
+    void SetPath(const QString &path) { path_ = path; }
 
-    void restore();
+    /**
+     * @brief Save 保存数据到配置文件
+     */
+    void Save() const;
+
+    /**
+     * @brief Restore 配置文件还原数据
+     */
+    void Restore();
+
+    /**
+     * @brief Size 返回数据数量
+     * @return 数量
+     */
+    int Size() const { return args_.size(); }
+
+    /**
+     * @brief GetArgsPath 获取参数的应用路径
+     * @param i 索引
+     * @return 不存在返回空, 存在返回应用程序路径
+     */
+    QString GetArgsPath(int i);
+
+    void Start(const QString &appPath, int index = 0);
+    void Stop(const QString &appPath, int index = 0);
+
+    void StartAll();
+    void StopAll();
+
+    bool IsRun(const QString &appPath, int index = 0) const;
+    bool IsAllRun() const;
 
 private:
-    void packageArgsFormat(argsFormat &arg) const;
-    void unpackageArgsFormat(argsFormat &arg) const;
 
-    QByteArray encrypt(QByteArray data, const QByteArray &key) const;
-    QByteArray decrypt(QByteArray data, const QByteArray &key) const;
+    /**
+     * @brief GetArgsIndex 搜索args_是否存在该路径
+     * @param path 应用路径
+     * @param pos 起始位置
+     * @return 存在返回当前索引, 不存在返回-1
+     */
+    int GetArgsIndex(const QString &path, int pos = 0) const;
+    int GetArgsIndex(const QObject *obj) const;
+
+    /**
+     * @brief GetSameArgsIndex 获取相同路径的最后索引
+     * @param path 路径
+     * @param num 相同数量
+     * @return 不存在返回-1, 数量不够则返回最后正确的位置
+     */
+    int GetSameArgsIndex(const QString &appPath, int num) const;
+
+signals:
+    void AppStandOut(const QString &path, const QString &log);
+    void AppErrorOut(const QString &path, const QString &log);
+    void AppStarted(const QString &path);
+    void AppExitStatus(const QString &path, int code, QProcess::ExitStatus status);
+
+private slots:
+    void ParseStandOut();
+    void ParseErrorOut();
+    void ParseStarted();
+    void ParseExited(int code, QProcess::ExitStatus status);
 
 private:
-    QByteArray key_;
-    QString path_;
-    QString app_;
-    QVector<argsFormat> args_;
+    QByteArray key_;    ///< 加密密钥
+    QString path_;      ///< 文件保存路径
+    QVector<AppArgsStruct> args_;
 };
 
 #endif // APPCONSOLE_H
