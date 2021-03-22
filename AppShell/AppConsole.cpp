@@ -49,6 +49,18 @@ bool AppConsole::DelApp(const QString &appPath, int index)
 }
 
 
+bool AppConsole::ModifyAppPath(const QString &oldPath, const QString &newPath, int index)
+{
+    int pos = GetSameArgsIndex(oldPath, index);
+    if (pos == -1) {
+        return false;
+    }
+
+    args_[pos].args.path = newPath;
+    return true;
+}
+
+
 bool AppConsole::CleanArgs(const QString &appPath, int index)
 {
     int pos = GetSameArgsIndex(appPath, index);
@@ -228,16 +240,16 @@ void AppConsole::Stop(const QString &appPath, int index)
 
 void AppConsole::StartAll()
 {
-    for (auto &i : args_) {
-        Start(i.args.path);
+    for (int i = 0; i < args_.size(); ++i) {
+        Start(args_.at(i).args.path, i);
     }
 }
 
 
 void AppConsole::StopAll()
 {
-    for (auto &i : args_) {
-        Stop(i.args.path);
+    for (int i = 0; i < args_.size(); ++i) {
+        Stop(args_.at(i).args.path, i);
     }
 }
 
@@ -314,7 +326,7 @@ void AppConsole::ParseStandOut()
 {
     int i = GetArgsIndex(sender());
     QString output = QString::fromLocal8Bit(args_.at(i).process->readAllStandardOutput());
-    emit AppStandOut(args_.at(i).args.path, output);
+    emit AppStandOut(args_.at(i).args.path, output, i);
 }
 
 
@@ -325,7 +337,7 @@ void AppConsole::ParseErrorOut()
         return ;
     }
     QString output = QString::fromLocal8Bit(args_.at(i).process->readAllStandardError());
-    emit AppErrorOut(args_.at(i).args.path, output);
+    emit AppErrorOut(args_.at(i).args.path, output, i);
 }
 
 
@@ -335,7 +347,7 @@ void AppConsole::ParseStarted()
     if (i == -1) {
         return ;
     }
-    emit AppStarted(args_.at(i).args.path);
+    emit AppStarted(args_.at(i).args.path, i);
 }
 
 
@@ -347,6 +359,6 @@ void AppConsole::ParseExited(int code, QProcess::ExitStatus status)
     }
 
     args_.at(index).process->close();
-    emit AppExitStatus(args_.at(index).args.path, code, status);
+    emit AppExitStatus(args_.at(index).args.path, code, status, index);
 }
 

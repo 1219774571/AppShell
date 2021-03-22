@@ -34,6 +34,15 @@ public:
     bool DelApp(const QString &appPath, int index = 0);
 
     /**
+     * @brief ModifyAppPath 修改应用程序路径
+     * @param oldPath 原路径
+     * @param newPath 更新路径
+     * @param index 更新第几个相同的[0, max), 超出则选择最后一个找到的, 0则第一个
+     * @return 存在更新成功返回true, 不存在返回false
+     */
+    bool ModifyAppPath(const QString &oldPath, const QString &newPath, int index = 0);
+
+    /**
      * @brief CleanArgs 清空应用程序的参数
      * @param appPath 应用路径
      * @param index 清空第几个相同的[0, max), 超出则清空最后一个找到的, 0则清空第一个
@@ -128,10 +137,10 @@ private:
     int GetSameArgsIndex(const QString &appPath, int num) const;
 
 signals:
-    void AppStandOut(const QString &path, const QString &log);
-    void AppErrorOut(const QString &path, const QString &log);
-    void AppStarted(const QString &path);
-    void AppExitStatus(const QString &path, int code, QProcess::ExitStatus status);
+    void AppStandOut(const QString &path, const QString &log, int index);
+    void AppErrorOut(const QString &path, const QString &log, int index);
+    void AppStarted(const QString &path, int index);
+    void AppExitStatus(const QString &path, int code, QProcess::ExitStatus status, int index);
 
 private slots:
     void ParseStandOut();

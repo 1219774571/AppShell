@@ -20,45 +20,15 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="0" column="0">
-     <widget class="QLabel" name="AppLabel">
+    <item row="3" column="3">
+     <widget class="QPushButton" name="Save">
       <property name="font">
        <font>
         <pointsize>12</pointsize>
        </font>
       </property>
       <property name="text">
-       <string>应用</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="8" colspan="2">
-     <widget class="QPushButton" name="DelApp">
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>删除应用</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="0">
-     <widget class="QLabel" name="ArgsOptionLabel">
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>参数选项</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       <string>保存</string>
       </property>
      </widget>
     </item>
@@ -68,135 +38,6 @@
        <font>
         <pointsize>12</pointsize>
        </font>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="2">
-     <widget class="QLabel" name="ArgsValueLabel">
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>参数值</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="3" colspan="2">
-     <widget class="QLineEdit" name="ArgsValue">
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-       </font>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="5" colspan="2">
-     <widget class="QPushButton" name="ArgsPassword">
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>加密参数值</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="7" colspan="2">
-     <widget class="QPushButton" name="AddArgs">
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>添加</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="9">
-     <widget class="QPushButton" name="DelArgs">
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>删除</string>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="0" colspan="10">
-     <widget class="QTextEdit" name="LogOut">
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-       </font>
-      </property>
-     </widget>
-    </item>
-    <item row="3" column="0">
-     <widget class="QPushButton" name="ReArgs">
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>重置参数</string>
-      </property>
-     </widget>
-    </item>
-    <item row="3" column="1">
-     <spacer name="horizontalSpacer_2">
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-       </font>
-      </property>
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
-      </property>
-      <property name="sizeType">
-       <enum>QSizePolicy::Preferred</enum>
-      </property>
-      <property name="sizeHint" stdset="0">
-       <size>
-        <width>140</width>
-        <height>20</height>
-       </size>
-      </property>
-     </spacer>
-    </item>
-    <item row="0" column="1" colspan="4">
-     <widget class="QComboBox" name="AppSelect"/>
-    </item>
-    <item row="0" column="5" colspan="3">
-     <widget class="QPushButton" name="AddApp">
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>添加应用</string>
-      </property>
-     </widget>
-    </item>
-    <item row="3" column="8" colspan="2">
-     <widget class="QPushButton" name="AllStartUp">
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>全部启动</string>
       </property>
      </widget>
     </item>
@@ -221,19 +62,130 @@
       </property>
      </spacer>
     </item>
-    <item row="3" column="3" colspan="2">
-     <widget class="QPushButton" name="Save">
+    <item row="0" column="5">
+     <widget class="QPushButton" name="ModifyApp">
       <property name="font">
        <font>
         <pointsize>12</pointsize>
        </font>
       </property>
       <property name="text">
-       <string>保存</string>
+       <string>修改应用</string>
       </property>
      </widget>
     </item>
-    <item row="3" column="5" colspan="3">
+    <item row="0" column="4">
+     <widget class="QPushButton" name="AddApp">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>添加应用</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="0">
+     <widget class="QPushButton" name="ReArgs">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>重置参数</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="2">
+     <widget class="QLabel" name="ArgsValueLabel">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>参数值</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="6">
+     <widget class="QPushButton" name="DelApp">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>删除应用</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="1">
+     <spacer name="horizontalSpacer_2">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Preferred</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>140</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item row="0" column="0">
+     <widget class="QLabel" name="AppLabel">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>应用</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="4">
+     <widget class="QPushButton" name="ArgsPassword">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>加密参数值</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="6">
+     <widget class="QPushButton" name="DelArgs">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>删除</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="4">
      <widget class="QPushButton" name="StartUp">
       <property name="font">
        <font>
@@ -245,6 +197,66 @@
       </property>
      </widget>
     </item>
+    <item row="1" column="3">
+     <widget class="QLineEdit" name="ArgsValue">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="0">
+     <widget class="QLabel" name="ArgsOptionLabel">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>参数选项</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="5">
+     <widget class="QPushButton" name="AddArgs">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>添加</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="5" colspan="2">
+     <widget class="QPushButton" name="AllStartUp">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>全部启动</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0" colspan="7">
+     <widget class="QTextEdit" name="LogOut">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="1" colspan="3">
+     <widget class="QComboBox" name="AppSelect"/>
+    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="Menu">
@@ -253,7 +265,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>37</height>
+     <height>29</height>
     </rect>
    </property>
   </widget>

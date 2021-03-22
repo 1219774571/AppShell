@@ -59,6 +59,8 @@ private:
      */
     int GetAppSelectNum(const QString &path, int index);
 
+    void UpdateSelectApp();
+
 private slots:
     void activeTray(QSystemTrayIcon::ActivationReason reason);
 
@@ -72,6 +74,7 @@ private slots:
     void on_DelArgs_clicked();
     void on_AllStartUp_clicked();
     void on_AppSelect_currentIndexChanged(const QString &arg1);
+    void on_ModifyApp_clicked();
 
 private:
     Ui::MainWindow *ui;

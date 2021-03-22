@@ -58,22 +58,25 @@ void MainWindow::init()
 {
     this->setWindowTitle(QString("AppShell %1").arg(VERSION));
 
-    for (int i = 0; i < app_->Size(); ++i) {
-        ui->AppSelect->addItem(app_->GetArgsPath(i));
-    }
+    UpdateSelectApp();
     ui->ArgsPassword->setStyleSheet(PASSWORD_CLOSE);
 
-    connect(app_, &AppConsole::AppStandOut, this, [this](const QString &path, const QString &log){ LogOut(path + ": " + log); });
-    connect(app_, &AppConsole::AppErrorOut, this, [this](const QString &path, const QString &log){ LogOut(path + ": " + log); });
-    connect(app_, &AppConsole::AppStarted, this, [this](const QString &path){
-        LogOut("start: " + app_->AppData(path));
+    connect(app_, &AppConsole::AppStandOut, this, [this](const QString &path, const QString &log, int index){
+        LogOut(QString("index[%1] %2: %3").arg(index).arg(path).arg(log));
+    });
+
+    connect(app_, &AppConsole::AppErrorOut, this, [this](const QString &path, const QString &log, int index){
+        LogOut(QString("index[%1] %2: %3").arg(index).arg(path).arg(log));
+    });
+    connect(app_, &AppConsole::AppStarted, this, [this](const QString &path, int index){
+        LogOut(QString("index[%1], start: %2").arg(index).arg(app_->AppData(path, index)));
         if (ui->AppSelect->currentText() == path) {
             ui->StartUp->setText(PROCESS_STOP);
         }
     });
-    connect(app_, &AppConsole::AppExitStatus, this, [this](const QString &path, int code, QProcess::ExitStatus status){
+    connect(app_, &AppConsole::AppExitStatus, this, [this](const QString &path, int code, QProcess::ExitStatus status, int index){
         QMetaEnum meta = QMetaEnum::fromType<QProcess::ExitStatus>();
-        LogOut(path + QString(": exit. code[%1], status[%2]").arg(code).arg(meta.valueToKey(status)));
+        LogOut(QString("index[%1] %2: exit. code[%3], status[%4]").arg(index).arg(path).arg(code).arg(meta.valueToKey(status)));
         if (ui->AppSelect->currentText() == path) {
             ui->StartUp->setText(PROCESS_START);
         }
@@ -274,6 +277,19 @@ int MainWindow::GetAppSelectNum(const QString &path, int index)
     return num;
 }
 
+void MainWindow::UpdateSelectApp()
+{
+    int index = ui->AppSelect->currentIndex();
+    ui->AppSelect->clear();
+    for (int i = 0; i < app_->Size(); ++i) {
+        ui->AppSelect->addItem(app_->GetArgsPath(i));
+    }
+    if (index == -1 || index >= ui->AppSelect->count()) {
+        return ;
+    }
+    ui->AppSelect->setCurrentIndex(index);
+}
+
 
 void MainWindow::activeTray(QSystemTrayIcon::ActivationReason reason)
 {
@@ -354,7 +370,7 @@ void MainWindow::on_StartUp_clicked()
 
 void MainWindow::on_AddApp_clicked()
 {
-    QString path =  QFileDialog::getOpenFileName(this, QStringLiteral("选择启动程序"));
+    QString path =  QFileDialog::getOpenFileName(this, QStringLiteral("选择启动程序"), ui->AppSelect->currentText());
     if (path.isEmpty()) {
         return ;
     }
@@ -446,4 +462,30 @@ void MainWindow::on_AppSelect_currentIndexChanged(const QString &arg1)
     } else {
         ui->StartUp->setText(PROCESS_START);
     }
+}
+
+void MainWindow::on_ModifyApp_clicked()
+{
+    QString path =  QFileDialog::getOpenFileName(this, QStringLiteral("选择启动程序"), ui->AppSelect->currentText());
+    if (path.isEmpty()) {
+        return ;
+    }
+
+    int index = ui->AppSelect->currentIndex();
+    if (index == -1) {
+        return ;
+    }
+
+    QString oldPath = ui->AppSelect->itemText(index);
+
+    if (oldPath == path) {
+        return ;
+    }
+
+    int num = GetAppSelectNum(oldPath, index);
+
+    if (app_->ModifyAppPath(oldPath, path, num) == false) {
+        LogOut("Application data does not exist");
+    }
+    UpdateSelectApp();
 }
