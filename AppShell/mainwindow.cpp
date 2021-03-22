@@ -80,7 +80,8 @@ void MainWindow::init()
         if (ui->AppSelect->currentText() == path) {
             ui->StartUp->setText(PROCESS_START);
         }
-        this->show();
+
+        QTimer::singleShot(0, this, &MainWindow::show);
     });
 }
 

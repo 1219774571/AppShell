@@ -11,6 +11,7 @@ include(../command.pri)
 SOURCES += \
     AppConsole.cpp \
     ArgsFormatData.cpp \
+    Tool.cpp \
     main.cpp \
     mainwindow.cpp \
     xxtea/xxtea.c \
@@ -19,6 +20,7 @@ SOURCES += \
 HEADERS += \
     AppConsole.h \
     ArgsFormatData.h \
+    Tool.h \
     mainwindow.h \
     version.h \
     xxtea/xxtea.h \

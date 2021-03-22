@@ -1,4 +1,5 @@
 ﻿#include "AppConsole.h"
+#include "Tool.h"
 
 #include <QFile>
 #include <QDomDocument>
@@ -325,7 +326,7 @@ int AppConsole::GetSameArgsIndex(const QString &appPath, int num) const
 void AppConsole::ParseStandOut()
 {
     int i = GetArgsIndex(sender());
-    QString output = QString::fromLocal8Bit(args_.at(i).process->readAllStandardOutput());
+    QString output = tool::IconvCode(args_.at(i).process->readAllStandardOutput());
     emit AppStandOut(args_.at(i).args.path, output, i);
 }
 
@@ -336,7 +337,7 @@ void AppConsole::ParseErrorOut()
     if (i == -1) {
         return ;
     }
-    QString output = QString::fromLocal8Bit(args_.at(i).process->readAllStandardError());
+    QString output = tool::IconvCode(args_.at(i).process->readAllStandardError());
     emit AppErrorOut(args_.at(i).args.path, output, i);
 }
 
