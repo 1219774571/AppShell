@@ -66,7 +66,7 @@ void MainWindow::init()
     connect(app_, &AppConsole::AppStandOut, this, [this](const QString &path, const QString &log){ LogOut(path + ": " + log); });
     connect(app_, &AppConsole::AppErrorOut, this, [this](const QString &path, const QString &log){ LogOut(path + ": " + log); });
     connect(app_, &AppConsole::AppStarted, this, [this](const QString &path){
-        LogOut(path + ": start");
+        LogOut("start: " + app_->AppData(path));
         if (ui->AppSelect->currentText() == path) {
             ui->StartUp->setText(PROCESS_STOP);
         }
@@ -87,10 +87,10 @@ void MainWindow::initSystemTray()
     connect(systemTray_, &QSystemTrayIcon::activated, this, &MainWindow::activeTray);
 
     QMenu *menu = new QMenu(this);
-    QAction *action = new QAction("显示", menu);
+    QAction *action = new QAction(QStringLiteral("显示"), menu);
     connect(action, &QAction::triggered, this, [this](){ this->show(); });
     menu->addAction(action);
-    action = new QAction("退出", menu);
+    action = new QAction(QStringLiteral("退出"), menu);
     connect(action, &QAction::triggered, this, [this](){ this->~MainWindow(); exit(0); });
     menu->addAction(action);
     systemTray_->setContextMenu(menu);
@@ -119,7 +119,7 @@ void MainWindow::initProcess()
         }
     }
 
-    if (app_->IsAllRun()) {
+    if (app_->IsAllRun() && app_->Size() != 0) {
         QTimer::singleShot(0, this, &MainWindow::hide);
     }
 }

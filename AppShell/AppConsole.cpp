@@ -209,7 +209,7 @@ void AppConsole::Start(const QString &appPath, int index)
     connect(args_.at(pos).process.data(), &QProcess::started, this, &AppConsole::ParseStarted);
     connect(args_.at(pos).process.data(), SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(ParseExited(int, QProcess::ExitStatus)));
 
-    args_.at(pos).process->start(appPath, this->AppArgs(appPath));
+    args_.at(pos).process->start(appPath, this->AppArgs(appPath, pos));
 }
 
 

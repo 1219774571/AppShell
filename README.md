@@ -6,8 +6,7 @@
 
 ```shell
 git clone https://github.com/coffeeCatCode/AppShell.git
-git submodule init
-git submodule update
+git submodule update --init --recursive
 ```
 
 ## 操作说明

@@ -64,11 +64,15 @@ QStringList ArgsFormatBase::Args(const QByteArray &key) const
 
     switch (method) {
     case kPassword :{
-        argsList.append(QByteArray::fromBase64(xxteaInteface::decrypt(value.toUtf8(), key)));
+        if (value.isEmpty() == false) {
+            argsList.append(xxteaInteface::decrypt(QByteArray::fromBase64(value.toUtf8()), key));
+        }
     }break;
     case kNone:
     default:
-        argsList.append(value.toUtf8());
+        if (value.isEmpty() == false) {
+            argsList.append(value.toUtf8());
+        }
     }
 
     return argsList;
@@ -94,7 +98,11 @@ QStringList ArgsFormat::Args(const QByteArray &key) const
 {
     QStringList argsList;
     for (auto &i : args) {
-        argsList.append(i.Args(key));
+        QStringList appArgs = i.Args(key);
+        if (appArgs.isEmpty()) {
+            continue;
+        }
+        argsList.append(appArgs);
     }
     return argsList;
 }

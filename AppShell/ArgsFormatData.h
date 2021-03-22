@@ -8,6 +8,7 @@
 #include <QDomElement>
 #include <QProcess>
 #include <QSharedPointer>
+#include <QVector>
 
 
 struct nArgsFormat;
