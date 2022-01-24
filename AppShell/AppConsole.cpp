@@ -184,7 +184,7 @@ void AppConsole::Restore()
         ArgsFormat args(nArgs);
         AppArgsStruct appArgs(args);
         args_.append(appArgs);
-        element = element.nextSiblingElement();
+        element = element.nextSiblingElement("App");
     }
 }
 
